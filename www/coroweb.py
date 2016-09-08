@@ -58,7 +58,7 @@ def get_required_kw_args(fn):
             args.append(name)
     return tuple(args)
 
-# 获取fn的所有命名关键字参数的参数
+# 获取fn的所有命名关键字参数
 def get_named_kw_args(fn):
     args = []
     params = inspect.signature(fn).parameters

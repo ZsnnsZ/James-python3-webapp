@@ -38,6 +38,7 @@ def init_jinja2(app, **kw):
         for name, f in filters.items():
             env.filters[name] = f
     app['__templating__'] = env
+
 @asyncio.coroutine
 def logger_factory(app, handler):
     @asyncio.coroutine
@@ -46,6 +47,7 @@ def logger_factory(app, handler):
         # await asyncio.sleep(0.3)
         return (yield from handler(request))
     return logger
+
 @asyncio.coroutine
 def data_factory(app, handler):
     @asyncio.coroutine

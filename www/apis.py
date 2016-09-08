@@ -19,6 +19,7 @@ class APIError(Exception):
         self.data = data
         self.message = message
 
+
 class APIValueError(APIError):
     '''
     Indicate the input value has error or invalid. The data specifies the error field of input form.

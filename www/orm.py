@@ -9,54 +9,67 @@ import aiomysql
 
 def log(sql, args=()):
     logging.info('SQL:%s' % sql)
-#use async/await to realize Asynchronous operation instead of @asyncio.coroutine/yield from
-async def create_pool(loop, **kw):
-    logging.info("create database connection pool...")
-    global __pool
-    __pool = await aiomysql.create_pool(
-        host = kw.get('host','localhost'),
-        port = kw.get('port',3306),
-        user = kw['user'],
-        password = kw['password'],
-        db = ['db'],
-        charset = kw.get('charset','utf-8'),
-        autocommit=kw.get('autocommit', True),
-        maxsize=kw.get('maxsize', 10),
-        minsize=kw.get('minsize', 1),
-        loop=loop#这个看不懂
-    )
 
-async def select(sql, args, size=None):
+# 在3.5中用async/await机制实现@asyncio.coroutine/yield from的功能
+# 会出现很多意想不到的错误，例如此处创建连接池进行插入的时候
+@asyncio.coroutine
+def create_pool(loop,**kw):
+    log('create database connection pool……')
+    global __pool
+    # 调用一个子协程来创建全局连接池，create_pool返回一个pool实例对象
+    __pool= yield from aiomysql.create_pool(
+        # 连接的基本属性设置
+        host=kw.get('host', 'localhost'), # 数据库服务器位置，本地
+        port=kw.get('port', 3306), # MySQL端口号
+        user=kw['user'], # 登录用户名
+        password=kw['password'], # 登录密码
+        db=kw['db'], # 数据库名
+        charset=kw.get('charset','utf8'), # 设置连接使用的编码格式utf-8
+        autocommit=kw.get('autocommit',True),  # 是否自动提交，默认false
+
+        # 以下是可选项设置
+        maxsize=kw.get('maxsize',10), # 最大连接池大小，默认10
+        minsize=kw.get('minsize',1), # 最小连接池大小，默认1
+        loop=loop # 设置消息循环
+    )
+@asyncio.coroutine
+def select(sql, args, size=None):
     log(sql,args)
     global __pool
-    async with __pool.get() as conn:
-        async with conn.cursor(aiomysql.DictCursor) as cur:
-            await cur.execute(sql.replace('?','%s'),args or ())#使用sql语句,这里要接收的参数都用%s占位符,占位符永远都要用%s
-            if size:
-                rs = await cur.fetchmany(size)
-            else:
-                rs = await cur.fetchall()
+    with (yield from __pool) as conn:  # with...as...的作用就是try...exception...
+        # 打开一个DictCursor，以dict形式返回结果的游标
+        cur = yield from conn.cursor(aiomysql.DictCursor)
+        # sql的占位符为? 而MySQL的占位符为%s 替换
+        yield from cur.execute(sql.replace('?', '%s'), args or ())
+        # 如果size不为空，则取一定量的结果集
+        if size:
+            rs = yield from cur.fetchmany(size)
+        else:
+            rs = yield from cur.fetchall()
+        yield from cur.close()
         logging.info('rows returned:%s' % len(rs))
         return rs
 
-async def execute(sql, args, autocommit=True):
+def execute(sql, args, autocommit=True):
     log(sql)
-    async with __pool.get() as conn:
+    with (yield from __pool) as conn:
         if not autocommit:
-            await conn.begin()
+            yield from conn.begin()
         try:
-            async with conn.cursor(aiomysql.DictCursor) as cur:
-                await cur.execute(sql.replace('?', '%s'), args)
-                affected = cur.rowcount#affected是受影响的行数，比如说插入一行数据，那受影响行数就是一行
+            cur = yield from conn.cursor()
+            yield from cur.execute(sql.replace('?','%s'), args)
+            affected = cur.rowcount
+            print('affected:',affected)
+            yield from cur.close()
             if not autocommit:
-                await conn.commit()
+                yield from conn.commit()
         except BaseException as e:
             if not autocommit:
-                await conn.rollback()
+                yield from conn.rollback()
             raise
         return affected
 
-#这个函数在元类中被引用，作用是创建一定数量的占位符
+#这个函数在元类中被引用，作用是将其占位符拼接起来成'?,?,?'的形式
 def create_args_string(num):
     L = []
     for n in range(num):
@@ -72,30 +85,36 @@ class Field(object):
         self.primary_key = primary_key#主键
         self.default = default
 
+    # 返回类名(域名)，字段类型，字段名
     def __str__(self):
         return '<%s, %s:%s>' % (self.__class__.__name__, self.column_type, self.name)
 
+# 字符串域。映射varchar
 class StringField(Field):
     #ddl是数据定义语言("data definition languages")，默认值是'varchar(100)'，意思是可变字符串，长度为100
     #和char相对应，char是固定长度，字符串长度不够会自动补齐，varchar则是多长就是多长，但最长不能超过规定长度
     def __init__(self, name=None, primary_key=False, default=None, ddl='varchar(100)'):
         super().__init__(name, ddl, primary_key, default)
 
+# 布尔域，映射boolean
 class BooleanField(Field):
 
     def __init__(self, name=None, default=False):
         super().__init__(name, 'boolean', False, default)
 
+# 整型域，映射Integer
 class IntegerField(Field):
 
     def __init__(self, name=None, primary_key=False, default=0):
         super().__init__(name, 'bigint', primary_key, default)
 
+# 浮点数域,映射float
 class FloatField(Field):
 
     def __init__(self, name=None, primary_key=False, default=0.0):
         super().__init__(name, 'real', primary_key, default)
 
+# 文本域
 class TextField(Field):
 
     def __init__(self, name=None, default=None):
@@ -182,7 +201,8 @@ class Model(dict, metaclass=ModelMetaclass):
         return value
 
     @classmethod#这个装饰器是类方法的意思，这样就可以不创建实例直接调用类的方法
-    async def findAll(cls, where=None, args=None, **kw):
+    @asyncio.coroutine
+    def findAll(cls, where=None, args=None, **kw):
         ' find objects by where clause. '
         sql = [cls.__select__]#'select `%s`, %s from `%s`' % (primaryKey, ', '.join(escaped_fields), tableName)
         if where:
@@ -207,46 +227,65 @@ class Model(dict, metaclass=ModelMetaclass):
                 args.extend(limit)##用extend是为了把tuple的小括号去掉，因为args传参的时候不能包含tuple
             else:
                 raise ValueError('Invalid limit value: %s' % str(limit))
-        rs = await select(' '.join(sql), args)#sql语句和args都准备好了就交给select函数去执行
+        rs = yield from select(' '.join(sql), args)#sql语句和args都准备好了就交给select函数去执行
         return [cls(**r) for r in rs]#将所有查询结果返回
 
     @classmethod
-    async def findNumber(cls, selectField, where=None, args=None):
+    @asyncio.coroutine
+    def findNumber(cls, selectField, where=None, args=None):
         ' find number by select and where. '
         sql = ['select %s _num_ from `%s`' % (selectField, cls.__table__)]#cls.__table__ = tablename
         if where:
             sql.append('where')
             sql.append(where)
-        rs = await select(' '.join(sql), args, 1)
+        rs = yield from select(' '.join(sql), args, 1)
         if len(rs) == 0:
             return None
         return rs[0]['_num_']
 
+    # 按主键查找
     @classmethod
-    async def find(cls, pk):
+    @asyncio.coroutine
+    def find(cls, pk):
         ' find object by primary key. '
-        rs = await select('%s where `%s`=?' % (cls.__select__, cls.__primary_key__), [pk], 1)
+        rs = yield from select('%s where `%s`=?' % (cls.__select__, cls.__primary_key__), [pk], 1)
         if len(rs) == 0:
             return None
         return cls(**rs[0])
 
     # save、update、remove这三个方法需要管理员权限才能操作，所以不定义为类方法，需要创建实例之后才能调用
-    async def save(self):
-        args = list(map(self.getValueOrDefault, self.__fields__))#利用map获取
+
+    @asyncio.coroutine
+    def save(self):
+        # 我们在定义__insert__时,将主键放在了末尾.因为属性与值要一一对应,因此通过append的方式将主键加在最后
+        # 使用getValueOrDefault方法,可以调用time.time这样的函数来获取值
+        print("start save")
+        args = list(map(self.getValueOrDefault, self.__fields__))
         args.append(self.getValueOrDefault(self.__primary_key__))
-        rows = await execute(self.__insert__, args)
+        rows = yield from execute(self.__insert__, args)
         if rows != 1:
             logging.warning('failed to insert record: affected rows: %s' % rows)
+        else:
+            print('save sucess!')
 
-    async def update(self):
+    @asyncio.coroutine
+    def update(self):
+        print('start update')
+        # 像time.time,next_id之类的函数在插入的时候已经调用过了,没有其他需要实时更新的值,因此调用getValue
         args = list(map(self.getValue, self.__fields__))
         args.append(self.getValue(self.__primary_key__))
-        rows = await execute(self.__update__, args)
+        rows = yield from execute(self.__update__, args)
         if rows != 1:
             logging.warning('failed to update by primary key: affected rows: %s' % rows)
+        else:
+            print('update sucess!')
 
-    async def remove(self):
+    @asyncio.coroutine
+    def remove(self):
+        print('start remove')
         args = [self.getValue(self.__primary_key__)]
-        rows = await execute(self.__delete__, args)
+        rows = yield from execute(self.__delete__, args)
         if rows != 1:
             logging.warning('failed to remove by primary key: affected rows: %s' % rows)
+        else:
+            print('remove sucess!')

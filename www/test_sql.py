@@ -3,14 +3,14 @@
 
 __author__ = 'James Z'
 
-from www import orm
+import www.orm
 import asyncio,sys
 from www.models import User, Blog, Comment
 
 @asyncio.coroutine
 def test(loop):
-    yield from orm.create_pool(loop=loop, user='www-data', password='www-data', db='awesome')
-    u = User(name='test77',email='test77@test.com',passwd='test',image='about:blank')
+    yield from www.orm.create_pool(loop=loop, host='localhost', port=3306, user='root', password='177288', db='awesome')
+    u = User(name='Test', email='test@example.com', passwd='1234567890', image='about:blank')
     yield from u.save()
 
 loop = asyncio.get_event_loop()

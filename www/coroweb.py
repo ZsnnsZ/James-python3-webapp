@@ -110,7 +110,7 @@ class RequestHandler(object):
     def __call__(self, request):
         kw = None
         # 有关键字参数或者命名关键字或者
-        if self.has_var_kw_arg or self.has_named_kw_args or self._required_kw_args:
+        if self._has_var_kw_arg or self._has_named_kw_args or self._required_kw_args:
             if request.method == 'POST':
                 if not request.content_type:
                     return web.HTTPBadRequest('Missing Content_Type!')

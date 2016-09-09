@@ -77,7 +77,7 @@ def response_factory(app, handler):
         if isinstance(r, str):
             if r.startswith('redirect:'):
                 return web.HTTPFound(r[9:])
-            resp = web.Response(body=r.encode('utf-8'))
+            resp = web.Response(body = r.encode('utf-8'))
             resp.content_type = 'text/html;charset=utf-8'
             return resp
         if isinstance(r, dict):

@@ -13,7 +13,7 @@ from www.apis import APIError
 
 def get(path):
     '''
-    Define decorator @get('/path')
+    Define d    ecorator @get('/path')
     '''
     def decorator(func):
         @functools.wraps(func)#把原始函数的__name__等属性复制到wrapper()函数中，否则，有些依赖函数签名的代码执行就会出错。
@@ -67,6 +67,7 @@ def get_named_kw_args(fn):
             args.append(name)
     return tuple(args)
 
+# 是否有命名关键字参数
 def has_named_kw_args(fn):
     params = inspect.signature(fn).parameters
     for name, param in params.items():
@@ -94,7 +95,7 @@ def has_request_arg(fn):
             raise ValueError('request parameter must be the last named parameter in function: %s%s' % (fn.__name__, str(sig)))
         return found
 
-# 处理请求
+# 封装URL处理函数，从request中获取参数
 class RequestHandler(object):
 
     def __init__(self, app ,fn):
@@ -109,12 +110,12 @@ class RequestHandler(object):
     @asyncio.coroutine
     def __call__(self, request):
         kw = None
-        # 有关键字参数或者命名关键字或者
-        if self._has_var_kw_arg or self._has_named_kw_args or self._required_kw_args:
+        # 若有关键字参数或者命名关键字参数
+        if self._has_var_kw_arg or self._has_named_kw_args:
             if request.method == 'POST':
                 if not request.content_type:
                     return web.HTTPBadRequest('Missing Content_Type!')
-                ct = request.content_type.lower()
+                ct = request.content_type.lower()# content_type是request提交的消息主体类型
                 if ct.startwith('application/json'):
                     params = yield from request.json()
                     if not isinstance(params,dict):

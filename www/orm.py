@@ -12,6 +12,9 @@ def log(sql, args=()):
 
 # 在3.5中用async/await机制实现@asyncio.coroutine/yield from的功能
 # 会出现很多意想不到的错误，例如此处创建连接池进行插入的时候
+
+# 创建全局连接池，好处是不必频繁的打开和关闭数据库连接
+# 每个HTTP请求都可以从连接池中直接获取数据库连接
 @asyncio.coroutine
 def create_pool(loop,**kw):
     log('create database connection pool……')
@@ -50,6 +53,7 @@ def select(sql, args, size=None):
         logging.info('rows returned:%s' % len(rs))
         return rs
 
+# insert, update, delete通用函数
 def execute(sql, args, autocommit=True):
     log(sql)
     with (yield from __pool) as conn:
@@ -58,7 +62,7 @@ def execute(sql, args, autocommit=True):
         try:
             cur = yield from conn.cursor()
             yield from cur.execute(sql.replace('?','%s'), args)
-            affected = cur.rowcount
+            affected = cur.rowcount# execute()函数和select()函数所不同的是，cursor对象不返回结果集，而是通过rowcount返回结果数
             print('affected:',affected)
             yield from cur.close()
             if not autocommit:
@@ -91,8 +95,8 @@ class Field(object):
 
 # 字符串域。映射varchar
 class StringField(Field):
-    #ddl是数据定义语言("data definition languages")，默认值是'varchar(100)'，意思是可变字符串，长度为100
-    #和char相对应，char是固定长度，字符串长度不够会自动补齐，varchar则是多长就是多长，但最长不能超过规定长度
+    # ddl是数据定义语言("data definition languages")，默认值是'varchar(100)'，意思是可变字符串，长度为100
+    # 和char相对应，char是固定长度，字符串长度不够会自动补齐，varchar则是多长就是多长，但最长不能超过规定长度
     def __init__(self, name=None, primary_key=False, default=None, ddl='varchar(100)'):
         super().__init__(name, ddl, primary_key, default)
 

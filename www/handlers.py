@@ -13,7 +13,7 @@ from www.models import User, Comment, Blog, next_id
 
 @asyncio.coroutine
 @get('/')
-def index():
+def index():# 去掉参数request就可以了，不明白为什么
     users = yield from User.findAll()
     return {
         '__template__': 'test.html',

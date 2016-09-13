@@ -111,12 +111,12 @@ class RequestHandler(object):
     def __call__(self, request):
         kw = None
         # 若有关键字参数或者命名关键字参数
-        if self._has_var_kw_arg or self._has_named_kw_args:
+        if self._has_var_kw_arg or self._has_named_kw_args or self._required_kw_args:
             if request.method == 'POST':
                 if not request.content_type:
                     return web.HTTPBadRequest('Missing Content_Type!')
                 ct = request.content_type.lower()# content_type是request提交的消息主体类型
-                if ct.startwith('application/json'):
+                if ct.startswith('application/json'):
                     params = yield from request.json()
                     if not isinstance(params,dict):
                         return web.HTTPBadRequest('JSON body must be object.')
@@ -124,6 +124,7 @@ class RequestHandler(object):
                 elif ct.startswith('application/x-www-form-urlencoded') or ct.startswith('multipart/form-data'):
                     params = yield from request.post()  # 浏览器表单信息用post方法来读取
                     kw = dict(**params)
+                    # print('line 127'+kw)
                 else:  # post的消息主体既不是json对象，又不是浏览器表单，那就只能返回不支持该消息主体类型
                     return web.HTTPBadRequest('Unsupported Content-Type: %s' % request.content_type)
             if request.method == 'GET':
@@ -132,7 +133,6 @@ class RequestHandler(object):
                     kw = dict()
                     for k, v in parse.parse_qs(qs, True).items():
                         kw[k] = v[0]
-
         if kw is None:
             kw = dict(**request.match_info)#request.match_info封装了与 request 的 path 和 method 完全匹配的 PlainResource 对象。
         else:
@@ -142,19 +142,21 @@ class RequestHandler(object):
                 # remove all unamed kw:
                 for name in self._named_kw_args:#把命名关键字变量通过copy这个中间量存到kw中
                     if name in kw:
-                        copy['name'] = kw[name]
-                    kw = copy
-                for k, v in request.match_info.items():
-                    if k in kw:# 判断关键字参数和命名关键字参数是否有重复的
-                        logging.warning('Duplicate arg name in named arg and kw args: %s' % k)
-                    kw[k] = v
+                        copy[name] = kw[name]# 大意写成copy['name'],这样就只给name赋了值，导致值缺失
+                kw = copy
+                print(kw)
+            for k, v in request.match_info.items():#for 循环嵌套出了问题，发现之后我好伤心
+                if k in kw:# 判断关键字参数和命名关键字参数是否有重复的
+                    logging.warning('Duplicate arg name in named arg and kw args: %s' % k)
+                kw[k] = v
         if self._has_request_arg:
             kw['request'] = request
         # check required kw:
         if self._required_kw_args:
             for name in self._required_kw_args:
                 if not name in kw:
-                    return web.HTTPBadRequest('Missing argument: %s' % name)
+                    # return web.HTTPBadRequest('Missing argument: %s' % name)
+                    print('coroweb.py 158')
         logging.info('call with args: %s' % str(kw))
         try:
             r = yield from self._func(**kw)

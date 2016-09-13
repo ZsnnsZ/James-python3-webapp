@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
+from www.config import configs
 
 __author__ = 'ZsnnsZ'
 
@@ -17,6 +18,7 @@ from jinja2 import Environment,FileSystemLoader
 
 import www.orm
 from www.coroweb import add_routes, add_static
+from www.handlers import cookie2user, COOKIE_NAME
 
 def init_jinja2(app, **kw):
     logging.info('init jinja2...')
@@ -61,6 +63,21 @@ def data_factory(app, handler):
                 logging.info('request form: %s' % str(request.__data__))
         return (yield from handler(request))
     return parse_data
+
+@asyncio.coroutine
+def auth_factory(app, handler):
+    @asyncio.coroutine
+    def auth(request):
+        logging.info('check user: %s %s' % (request.method, request.path))
+        request.__user__ = None
+        cookie_str = request.cookies.get(COOKIE_NAME)
+        if cookie_str:
+            user = yield from cookie2user(cookie_str)
+            if user:
+                logging.info('set current user: %s' % user.email)
+                request.__user__ = user
+        return (yield from handler(request))
+    return auth
 
 @asyncio.coroutine
 def response_factory(app, handler):
@@ -117,7 +134,7 @@ def datetime_filter(t):
 
 @asyncio.coroutine
 def init(loop):
-    yield from www.orm.create_pool(loop=loop, host='127.0.0.1', port=3306, user='root', password='177288', db='awesome')
+    yield from www.orm.create_pool(loop=loop, sword='177288', **configs.db)
     app = web.Application(loop=loop, middlewares=[
         logger_factory, response_factory
     ])

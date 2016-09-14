@@ -22,6 +22,7 @@ from www.handlers import cookie2user, COOKIE_NAME
 
 def init_jinja2(app, **kw):
     logging.info('init jinja2...')
+    # 设置解析模板需要用到的环境变量
     options = dict(
         autoescape = kw.get('autoescape', True),
         block_start_string = kw.get('block_start_string', '{%'),
@@ -32,8 +33,10 @@ def init_jinja2(app, **kw):
     )
     path = kw.get('path', None)
     if path is None:
+        # 下面这句代码其实是三个步骤，先取当前文件也就是app.py的绝对路径，然后取这个绝对路径的目录部分，最后在这个目录后面加上templates子目录
         path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'templates')
     logging.info('set jinja2 template path: %s' % path)
+    # 配置jinja2环境
     env = Environment(loader=FileSystemLoader(path), **options)
     filters = kw.get('filters', None)
     if filters is not None:
@@ -84,9 +87,9 @@ def response_factory(app, handler):
     @asyncio.coroutine
     def response(request):
         logging.info('Response handler...')
-        r = yield from handler(request)
+        r = yield from handler(request)# 调用handler来处理url请求,并返回响应结果
         if isinstance(r, web.StreamResponse):
-            return r
+            return r# StreamResponse是aiohttp定义response的基类,即所有响应类型都继承自该类
         if isinstance(r, bytes):
             resp = web.Response(body=r)
             resp.content_type = 'application/octet-stream'
@@ -104,6 +107,7 @@ def response_factory(app, handler):
                 resp.content_type = 'application/json;charset=utf-8'
                 return resp
             else:
+                r['__user__'] = request.__user__
                 resp = web.Response(body=app['__templating__'].get_template(template).render(**r).encode('utf-8'))
                 resp.content_type = 'text/html;charset=utf-8'
                 return resp
@@ -124,7 +128,7 @@ def datetime_filter(t):
     if delta < 60:
         return u'1分钟前'
     if delta < 3600:
-        return u'%s分钟前' % (delta // 60)
+        return u'%s分钟前' % (delta // 60)# //表示整除
     if delta < 86400:
         return u'%s小时前' % (delta // 3600)
     if delta < 604800:
@@ -134,10 +138,10 @@ def datetime_filter(t):
 
 @asyncio.coroutine
 def init(loop):
-    yield from www.orm.create_pool(loop=loop, sword='177288', **configs.db)
-    app = web.Application(loop=loop, middlewares=[
-        logger_factory, response_factory
-    ])
+    yield from www.orm.create_pool(loop=loop, **configs.db)
+    app = web.Application(loop=loop, middlewares=(
+        logger_factory,auth_factory, response_factory
+    ))
     init_jinja2(app, filters=dict(datetime=datetime_filter))
     add_routes(app, 'handlers')
     add_static(app)
@@ -145,6 +149,7 @@ def init(loop):
     logging.info('server started at http://127.0.0.1:9000...')
     return srv
 
+#入口
 loop = asyncio.get_event_loop()
 loop.run_until_complete(init(loop))
 loop.run_forever()

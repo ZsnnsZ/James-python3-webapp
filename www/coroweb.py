@@ -13,7 +13,7 @@ from www.apis import APIError
 
 def get(path):
     '''
-    Define d    ecorator @get('/path')
+    Define decorator @get('/path')
     '''
     def decorator(func):
         @functools.wraps(func)#把原始函数的__name__等属性复制到wrapper()函数中，否则，有些依赖函数签名的代码执行就会出错。
@@ -111,7 +111,7 @@ class RequestHandler(object):
     def __call__(self, request):
         kw = None
         # 若有关键字参数或者命名关键字参数
-        if self._has_var_kw_arg or self._has_named_kw_args or self._required_kw_args:
+        if self._has_var_kw_arg or self._has_named_kw_args:
             if request.method == 'POST':
                 if not request.content_type:
                     return web.HTTPBadRequest('Missing Content_Type!')
@@ -186,6 +186,9 @@ def add_routes(app, module_name):
     n = module_name.rfind('.')
     if n == (-1):
         mod = __import__(module_name, globals(), locals())
+        # __import__ 作用同import语句，但__import__是一个函数，并且只接收字符串作为参数,
+        # 其实import语句就是调用这个函数进行导入工作的, 其返回值是对应导入模块的引用
+        # __import__('os',globals(),locals(),['path','pip']) ,等价于from os import path, pip
     else:
         name = module_name[n+1:]
         mod = getattr(__import__(module_name[:n], globals(), locals(), [name]), name)
@@ -194,7 +197,7 @@ def add_routes(app, module_name):
             continue
         fn = getattr(mod, attr)
         if callable(fn):
-            method = getattr(fn, '__method__', None)
+            method = getattr(fn, '__method__', None)# fn.__method
             path = getattr(fn, '__route__', None)
             if method and path:
                 add_route(app, fn)

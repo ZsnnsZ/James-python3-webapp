@@ -45,7 +45,7 @@ def post(path):
 # 关于inspect.Parameter 的  kind 类型有5种：
 # POSITIONAL_ONLY		只能是位置参数
 # POSITIONAL_OR_KEYWORD	可以是位置参数也可以是关键字参数
-# VAR_POSITIONAL			相当于是 *args
+# VAR_POSITIONAL		相当于是 *args
 # KEYWORD_ONLY			关键字参数且提供了key
 # VAR_KEYWORD			相当于是 **kw
 
@@ -137,7 +137,7 @@ class RequestHandler(object):
             kw = dict(**request.match_info)#request.match_info封装了与 request 的 path 和 method 完全匹配的 PlainResource 对象。
         else:
             # 没有关键字参数但是有命名关键字参数
-            if not self._has_var_kw_arg and self._has_named_kw_args:
+            if not self._has_var_kw_arg and self._named_kw_args:
                 copy = dict()
                 # remove all unamed kw:
                 for name in self._named_kw_args:#把命名关键字变量通过copy这个中间量存到kw中

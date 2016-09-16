@@ -78,7 +78,7 @@ def cookie2user(cookie_str):
 def index(*,page = '1'):# 去掉参数request
     page_index = get_page_index(page)
     num = yield from Blog.findNumber('count(id)')
-    page = Page(num)
+    page = Page(num,page_index)
     if num == 0:
         blogs = []
     else:
@@ -221,6 +221,33 @@ def manage_edit_blog(*, id):
     }
 
 # ------------------------------------------users-------------------------------------------------------
+
+@get('/manage/users/create')
+def manage_create_user():
+    return {
+        '__template__': 'register.html',
+        'id': '',
+        'action': '/api/users'
+    }
+
+@post('/api/users/{id}/grant')
+def api_grant_user(request, *, id):
+    check_admin(request)
+    user = yield from User.find(id)
+    if (user.admin == 0):
+        user.admin = 1
+    else:
+        user.admin = 0
+    yield from user.update()
+    return dict(id=id)
+
+@post('/api/users/{id}/delete')
+def api_delete_user(request, *, id):
+    check_admin(request)
+    user = yield from User.find(id)
+    yield from user.remove()
+    return dict(id=id)
+
 @get('/manage/users')
 def manage_users(*, page='1'):
     return {
@@ -235,11 +262,14 @@ def register():
     }
 
 @get('/api/users')
-def api_get_users():
-    users = yield from User.findAll(orderBy='created_at desc')
-    for u in users:
-        u.passwd = '******'
-    return dict(users=users)
+def api_get_users(*,page='1'):
+    page_index = get_page_index(page)
+    num = yield from User.findNumber('count(id)')
+    p = Page(num, page_index)
+    if num == 0:
+        return dict(page=p, users=())
+    users = yield from User.findAll(orderBy='created_at desc', limit=(p.offset, p.limit))
+    return dict(page=p, users=users)
 
 @post('/api/users')
 def api_register_user(*, email, name, passwd):
@@ -271,3 +301,37 @@ def manage_comments(*, page='1'):
         '__template__': 'manage_comments.html',
         'page_index': get_page_index(page)
     }
+
+@get('/api/comments')
+def api_get_comments(*,page='1'):
+    page_index = get_page_index(page)
+    num = yield from Comment.findNumber('count(id)')
+    p = Page(num, page_index)
+    if num == 0:
+        return dict(page=p, comments=())
+    comments = yield from Comment.findAll(orderBy='created_at desc', limit=(p.offset, p.limit))
+    return dict(page=p, comments=comments)
+
+@post('/api/blogs/{id}/comments')
+def api_create_comment(request, *,id, content):
+    user = request.__user__
+    if user is None:
+        raise APIPermissionError('Please signin first.')
+    if not content or not content.strip():
+        raise APIValueError('content')
+    blog = yield from Blog.find(id)
+    if blog is None:
+        raise APIResourceNotFoundError('Blog')
+    comment = Comment(blog_id=blog.id, user_id=user.id, user_name=user.name, user_image=user.image,
+                      content=content.strip())
+    yield from comment.save()
+    return comment
+
+@post('/api/comments/{id}/delete')
+def api_delete_comments(request, *, id):
+    check_admin(request)
+    c = yield from Comment.find(id)
+    if c is None:
+        raise APIResourceNotFoundError('Comment')
+    yield from c.remove()
+    return dict(id=id)

@@ -17,8 +17,8 @@ class Page(object):
     # 参数说明：
     # item_count：要显示的条目数量
     # page_index：要显示的是第几页
-    # page_size：每页的条目数量，默认为10条
-    def __init__(self, item_count, page_index=1, page_size=10):
+    # page_size：每页的条目数量
+    def __init__(self, item_count, page_index=1, page_size=5):
         '''
         Init Pagination by item_count, page_index and page_size.
         '''

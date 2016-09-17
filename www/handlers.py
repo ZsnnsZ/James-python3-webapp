@@ -6,7 +6,7 @@ __author__ = 'James Z'
 ' url handlers '
 
 import re, time, json, logging, hashlib, base64, asyncio
-import www.markdown2
+from www.markdown_highlight import markdown_highlight
 from aiohttp import web
 from www.coroweb import get, post
 from www.apis import Page,APIValueError, APIResourceNotFoundError, APIError, APIPermissionError
@@ -172,7 +172,10 @@ def get_blog(id):
     comments = yield from Comment.findAll('blog_id=?', [id], orderBy='created_at desc')
     for c in comments:
         c.html_content = text2html(c.content)
-    blog.html_content = www.markdown2.markdown(blog.content)
+    # blog.html_content = text2html(blog.content)
+    # blog.content = markdown_highlight(blog.content)
+    blog.html_content = text2html(blog.content)
+
     return {
         '__template__': 'blog.html',
         'blog': blog,

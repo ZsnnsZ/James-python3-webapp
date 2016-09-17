@@ -183,15 +183,16 @@ def add_route(app, fn):
 
 # 将handlers模块中所有请求处理函数提取出来交给add_route去处理
 def add_routes(app, module_name):
-    n = module_name.rfind('.')
-    if n == (-1):
-        mod = __import__(module_name, globals(), locals())
-        # __import__ 作用同import语句，但__import__是一个函数，并且只接收字符串作为参数,
-        # 其实import语句就是调用这个函数进行导入工作的, 其返回值是对应导入模块的引用
-        # __import__('os',globals(),locals(),['path','pip']) ,等价于from os import path, pip
-    else:
-        name = module_name[n+1:]
-        mod = getattr(__import__(module_name[:n], globals(), locals(), [name]), name)
+    # n = module_name.rfind('.')
+    # if n == (-1):
+    #     mod = __import__(module_name, globals(), locals())
+    #     # __import__ 作用同import语句，但__import__是一个函数，并且只接收字符串作为参数,
+    #     # 其实import语句就是调用这个函数进行导入工作的, 其返回值是对应导入模块的引用
+    #     # __import__('os',globals(),locals(),['path','pip']) ,等价于from os import path, pip
+    # else:
+    #     name = module_name[n+1:]
+    #     mod = getattr(__import__(module_name[:n], globals(), locals(), [name]), name)
+    mod = __import__(module_name, fromlist=[''])# 重构后
     for attr in dir(mod):# dir返回一个list
         if attr.startswith('_'):
             continue

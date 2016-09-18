@@ -39,19 +39,19 @@
 
     <nav class="uk-navbar uk-navbar-attached uk-margin-bottom">
         <div class = "uk-container uk-container-center">
-            <a href="/" class="uk-navbar-brand">James Python Webapp</a>
+            <a href="/" class="uk-navbar-brand"><i class="uk-icon-user-secret"></i>JamesZSN</a>
             <ul class="uk-navbar-nav">
                 <li data-url="blogs"><a href="/" class="uk-animation-hover uk-animation-fade"><i class="uk-icon-home"></i>主页</a></li>
-                <li><a href="/manage/blogs" class="uk-animation-hover uk-animation-fade"><i class="uk-icon-book"></i>博文管理</a></li>
-                <li><a href="/manage/users" class="uk-animation-hover uk-animation-fade"><i class="uk-icon-book"></i>用户管理</a></li>
-                <li><a href="/manage/comments" class="uk-animation-hover uk-animation-fade"><i class="uk-icon-book"></i>评论管理</a></li>
+                <li><a href="/manage/blogs" class="uk-animation-hover uk-animation-fade"><i class="uk-icon-file-text-o"></i>博文管理</a></li>
+                <li><a href="/manage/users" class="uk-animation-hover uk-animation-fade"><i class="uk-icon-users"></i>用户管理</a></li>
+                <li><a href="/manage/comments" class="uk-animation-hover uk-animation-fade"><i class="uk-icon-comments-o"></i>评论管理</a></li>
                 <li><a target="_blank" href="https://github.com/ZsnnsZ/James-python3-webapp" class="uk-animation-hover uk-animation-fade"><i class="uk-icon-code"></i> <strong>源码</strong></a></li>
             </ul>
             <div class = "uk-navbar-flip">
                 <ul class="uk-navbar-nav">
                 {% if __user__ %}
                     <li class="uk-parent" data-uk-dropdown>
-                        <a href="#0"><i class="uk-icon-user"></i> {{ __user__.name }}</a>
+                        <a href="#0"><i class="uk-icon-user-secret"></i> {{ __user__.name }}</a>
                         <div class="uk-dropdown uk-dropdown-navbar">
                             <ul class="uk-nav uk-nav-navbar">
                                 <li><a href="/signout"><i class="uk-icon-sign-out"></i> 登出</a></li>
@@ -81,6 +81,7 @@
             <div class="uk-panel uk-margin-top uk-margin-bottom">
                 <p>
                     <a target="_blank" href="https://github.com/ZsnnsZ" class="uk-icon-button uk-icon-github-square" title="进入我的github"></a>
+                    <a target="_blank" href="https://weibo.com/JamesZSN?is_all=1" class="uk-icon-button uk-icon-weibo" title="进入我的sina微博"></a>
                     <a target="_blank" href="http://wpa.qq.com/msgrd?v=3&uin=925453683&site=qq&menu=yes" class="uk-icon-button uk-icon-qq" title="发QQ消息给我"></a>
                 </p>
                 <p>Powered by <a href="https://github.com/ZsnnsZ">James Python3 Webapp</a>. Copyright &copy; 2016. </p>

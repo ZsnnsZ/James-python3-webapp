@@ -11,14 +11,15 @@ from aiohttp import web
 
 from www.apis import APIError
 
-def get(path):
+def get(path):# 装饰器的名称并接收参数，
     '''
     Define decorator @get('/path')
+    在代码运行阶段为函数动态增强功能
     '''
-    def decorator(func):
+    def decorator(func):# 次里层，若装饰器不需要参数那么次里层就可作为最外层
         @functools.wraps(func)#把原始函数的__name__等属性复制到wrapper()函数中，否则，有些依赖函数签名的代码执行就会出错。
-        def wrapper(*args, **kw):
-            return func(*args, **kw)
+        def wrapper(*args, **kw):# 最里层
+            return func(*args, **kw)# 原函数
         wrapper.__method__ = 'GET'
         wrapper.__route__ = path
         return wrapper

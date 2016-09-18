@@ -68,9 +68,13 @@ $(function () {
             {% for comment in comments %}
             {% if comment.user_id==blog.user_id %}{% endif %}
             <li>
+                {% if comment.user_id == blog.user_id %}
+                <article class="uk-comment uk-comment-primary">
+                {% else %}
                 <article class="uk-comment">
+                {% endif %}
                     <header class="uk-comment-header">
-                        <img class="uk-comment-avatar uk-border-circle" width="50" height="50" src="{{ comment.user_image }}">
+                        <img class="uk-comment-avatar uk-border-circle" width="80" height="80" src="{{ comment.user_image }}">
                         <h4 class="uk-comment-title">{{ comment.user_name }}</h4>
                         <p class="uk-comment-meta">{{ comment.created_at|datetime }}</p>
                     </header>
@@ -90,16 +94,17 @@ $(function () {
     <div class="uk-width-medium-1-4">
         <div class="uk-panel uk-panel-box">
             <div class="uk-text-center">
-                <img class="uk-border-circle" width="120" height="120" src="{{ blog.user_image }}">
+
+                <img class="uk-border-rounded" width="150" height="150" src="{{ blog.user_image }}">
                 <h3>{{ blog.user_name }}</h3>
             </div>
         </div>
         <div class="uk-panel uk-panel-header">
             <h3 class="uk-panel-title">友情链接</h3>
             <ul class="uk-list uk-list-line">
-                <li><i class="uk-icon-link"></i> <a href="#">编程</a></li>
-                <li><i class="uk-icon-link"></i> <a href="#">思考</a></li>
-                <li><i class="uk-icon-link"></i> <a href="#">读书</a></li>
+                <li><i class="uk-icon-thumbs-o-up"></i> <a target="_blank" href="http://aiohttp.readthedocs.io/en/stable/web.html">aiohttp</a></li>
+                <li><i class="uk-icon-thumbs-o-up"></i> <a target="_blank" href="http://www.liaoxuefeng.com/wiki/0014316089557264a6b348958f449949df42a6d3a2e542c000">廖雪峰Python教程</a></li>
+                <li><i class="uk-icon-thumbs-o-up"></i> <a target="_blank" href="http://www.liaoxuefeng.com/wiki/0013739516305929606dd18361248578c67b8067c8c017b000/">廖雪峰Git教程</a></li>
             </ul>
         </div>
     </div>
